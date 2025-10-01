@@ -8,6 +8,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from rest_framework.authtoken.models import Token
 
+from cloudinary.models import CloudinaryField
 
 
 class CustomUserManager(BaseUserManager):
@@ -40,12 +41,45 @@ class CustomUserManager(BaseUserManager):
 
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
+
+    # KYC Fields
+    id_type = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        choices=[
+            ("passport", "Passport"),
+            ("driver_license", "Driver’s License"),
+            ("national_id", "National ID"),
+            ("voter_card", "Voter’s Card"),
+        ],
+        help_text="Select the type of ID provided",
+    )
+    id_front = CloudinaryField("image", blank=True, null=True, help_text="Front side of ID document")
+    id_back = CloudinaryField("image", blank=True, null=True, help_text="Back side of ID document")
+    is_verified = models.BooleanField(default=False)
+    has_submitted_kyc = models.BooleanField(default=False)
+    
+    # Personal Info
     email = models.EmailField(unique=True, max_length=255)
     first_name = models.CharField(max_length=50, blank=True, null=True)
     last_name = models.CharField(max_length=50, blank=True, null=True)
+    dob = models.DateField(blank=True, null=True)
+    address = models.CharField(max_length=500, blank=True, null=True)
+    postal_code = models.CharField(max_length=500, blank=True, null=True)
 
+
+    # Location & Contact Info
+    country = models.CharField(max_length=100, blank=True, null=True)
+    region = models.CharField(max_length=100, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    currency = models.CharField(max_length=10, blank=True, null=True)
+
+    
+
+    # User Balances
     account_id = models.CharField(max_length=10, blank=True, null=True)
-
     free_margin = models.DecimalField(verbose_name="Free Margin", max_digits=20, decimal_places=2, default=0.00, help_text="This is a monetary value.")
     user_funds = models.DecimalField(verbose_name="User Funds", max_digits=20, decimal_places=2, default=0.00, help_text="This is a monetary value.")
     balance = models.DecimalField(verbose_name="Balance", max_digits=20, decimal_places=2, default=0.00, help_text="This is a monetary value.")
@@ -132,10 +166,21 @@ class Transaction(models.Model):
         related_name="transactions"
     )
     transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
-    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    amount = models.DecimalField(verbose_name="Total Amount", max_digits=12, decimal_places=2)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     reference = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
+    currency = models.CharField(max_length=100)
+    unit = models.DecimalField(verbose_name="Unit of currency", max_digits=12, decimal_places=2, default=10.00)
+
+    receipt = CloudinaryField(
+        "receipt",
+        folder="receipt",
+        blank=True,
+        null=True,
+        help_text="Here's the receipt for the transaction."
+    )
+
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -152,6 +197,7 @@ class Ticket(models.Model):
     subject = models.CharField(max_length=200, blank=True, null=False)
     category = models.CharField(max_length=200, blank=True, null=False)
     description = models.TextField(blank=True, null=False)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.subject
@@ -159,8 +205,66 @@ class Ticket(models.Model):
 
 
 
+class PaymentMethod(models.Model):
+    WALLET_CHOICES = [
+        ("ETH", "Ethereum"),
+        ("BTC", "Bitcoin"),
+        ("SOL", "Solana"),
+        ("BANK", "Bank Transfer"),
+        ("CASHAPP", "Cash App"),
+        ("PAYPAL", "PayPal"),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payment_methods")
+    method_type = models.CharField(max_length=20, choices=WALLET_CHOICES)
+
+    # Generic fields to store values depending on type
+    address = models.CharField(max_length=255, blank=True, null=True)  # for ETH, BTC, SOL
+    bank_name = models.CharField(max_length=100, blank=True, null=True)
+    bank_account_number = models.CharField(max_length=50, blank=True, null=True)
+    cashapp_id = models.CharField(max_length=100, blank=True, null=True)
+    paypal_email = models.EmailField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.method_type}"
 
 
+
+class AdminWallet(models.Model):
+    CURRENCY_CHOICES = [
+        ("BTC", "Bitcoin (BTC)"),
+        ("ETH", "Ethereum (ETH)"),
+        ("SOL", "Solana (SOL)"),
+        ("USDT", "Tether (USDT)"),
+        ("BNB", "Binance Coin (BNB)"),
+        ("TRX", "Tron (TRX)"),
+    ]
+
+    currency = models.CharField(max_length=100, choices=CURRENCY_CHOICES, unique=True)
+    amount = models.DecimalField(verbose_name="Amount per unit", max_digits=12, decimal_places=2, default=10.00)
+    wallet_address = models.CharField(max_length=255)
+    qr_code = CloudinaryField(
+        "QRCode",
+        folder="wallet_qrcodes",
+        blank=True,
+        null=True,
+        help_text="Optional QR code image for scanning"
+    )
+
+    is_active = models.BooleanField(default=True, help_text="Enable/disable this payment option")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Admin Wallet"
+        verbose_name_plural = "Admin Wallets"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.get_currency_display()} - {self.wallet_address[:10]}..."
 
 
 
