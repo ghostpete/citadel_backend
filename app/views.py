@@ -7,7 +7,7 @@ from rest_framework.decorators import (
     permission_classes, 
     authentication_classes,
 )
-import uuid
+from collections import defaultdict
 from django.utils import timezone
 from .serializers import AdminWalletSerializer
 from decimal import Decimal, InvalidOperation
@@ -19,10 +19,12 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
+
 from .serializers import (
     TicketSerializer, 
     TransactionSerializer, 
     AdminWalletSerializer,
+    AssetSerializer,
 
 )
 from .models import (
@@ -31,13 +33,33 @@ from .models import (
     Transaction, 
     PaymentMethod, 
     AdminWallet,
-
+    Asset,
 )
 from django.utils.crypto import get_random_string
 
 
 User = get_user_model()
 
+
+
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def validate_token(request):
+    auth_header = request.headers.get("Authorization")
+    
+    if not auth_header or not auth_header.startswith("Token "):
+        return Response({"detail": "No token provided"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    token_key = auth_header.split(" ")[1]
+
+    try:
+        token = Token.objects.get(key=token_key)
+        user = token.user
+        return Response({"valid": True, "user": user.email}, status=status.HTTP_200_OK)
+    except Token.DoesNotExist:
+        return Response({"valid": False}, status=status.HTTP_401_UNAUTHORIZED)
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -638,7 +660,96 @@ def create_deposit(request):
 
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Trader
+from .serializers import TraderSerializer
 
+
+@api_view(["GET", "POST"])
+@permission_classes([AllowAny])
+def trader_list_create(request):
+    """
+    GET: List all traders
+    POST: Create a new trader
+    """
+    if request.method == "GET":
+        traders = Trader.objects.all().order_by("-created_at")
+        serializer = TraderSerializer(traders, many=True, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    if request.method == "POST":
+        serializer = TraderSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET", "PUT", "PATCH", "DELETE"])
+@permission_classes([AllowAny])
+def trader_detail(request, pk):
+    """
+    GET: Retrieve a single trader by ID
+    PUT/PATCH: Update trader
+    DELETE: Delete trader
+    """
+    try:
+        trader = Trader.objects.get(pk=pk)
+    except Trader.DoesNotExist:
+        return Response({"error": "Trader not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == "GET":
+        serializer = TraderSerializer(trader)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    elif request.method in ["PUT", "PATCH"]:
+        serializer = TraderSerializer(trader, data=request.data, partial=(request.method == "PATCH"))
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == "DELETE":
+        trader.delete()
+        return Response({"message": "Trader deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+
+
+
+@api_view(["GET"])
+def asset_list(request):
+    """
+    Return a flat list of all assets.
+    Example: GET /assets/
+    """
+    category = request.GET.get("category")
+    if category:
+        assets = Asset.objects.filter(category=category)
+    else:
+        assets = Asset.objects.all()
+    
+    serializer = AssetSerializer(assets, many=True)
+    return Response(serializer.data)
+
+
+
+@api_view(["GET"])
+def grouped_assets(request):
+    """
+    Return assets grouped by category.
+    Example: GET /assets/grouped/
+    """
+    assets = Asset.objects.all()
+    serializer = AssetSerializer(assets, many=True)
+    
+    grouped = defaultdict(list)
+    for asset in serializer.data:
+        grouped[asset["category"]].append(asset)
+    
+    return Response(grouped)
 
 
 

@@ -130,13 +130,19 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
 class Trader(models.Model):
     name = models.CharField(max_length=150)
     country = models.CharField(max_length=100)
-    avatar = models.URLField(max_length=255, blank=True, null=True)
-    gain = models.DecimalField(max_digits=10, decimal_places=2)  # e.g. 194.32
-    risk = models.PositiveSmallIntegerField()  # assuming 1–10 risk score
-    capital = models.CharField(max_length=50)  # stored as string because of "$"
-    copiers = models.PositiveIntegerField()
-    avg_trade_time = models.CharField(max_length=50)  # e.g. "1 week"
-    trades = models.PositiveIntegerField()
+    avatar =  CloudinaryField(
+        "Trader Image",
+        folder="copy_trader_images",
+        blank=True,
+        null=True,
+        help_text="Upload copy the trader image"
+    )
+    gain = models.DecimalField(max_digits=10, decimal_places=2, help_text="This should be the gain he made from the trade e.g. 194.32")  # e.g. 194.32
+    risk = models.PositiveSmallIntegerField(help_text="Risk score should be from 1 to 10.")  # assuming 1–10 risk score
+    capital = models.CharField(max_length=50, help_text="Enter the amount in dollars e.g. 2000, 4000")  # stored as string because of "$"
+    copiers = models.PositiveIntegerField(help_text="This should range from 1 to 300 or even more.")
+    avg_trade_time = models.CharField(max_length=50, help_text="This should be time basis like '1 week', '3 weeks', '2 months'")  # e.g. "1 week"
+    trades = models.PositiveIntegerField(help_text="This should be an integer showing the number of trade this trader has taken.")
 
     created_at = models.DateTimeField(auto_now_add=True)  # optional
     updated_at = models.DateTimeField(auto_now=True)      # optional
@@ -145,7 +151,7 @@ class Trader(models.Model):
         return f"{self.name} ({self.country})"
     
     class Meta:
-        verbose_name_plural = "Traders"
+        verbose_name_plural = "Copy Traders"
         verbose_name = "Trader"
 
 class Transaction(models.Model):
@@ -267,6 +273,62 @@ class AdminWallet(models.Model):
         return f"{self.get_currency_display()} - {self.wallet_address[:10]}..."
 
 
+
+class Asset(models.Model):
+    CATEGORY_CHOICES = [
+        ("Forex", "Forex"),
+        ("Crypto", "Crypto"),
+        ("Commodities", "Commodities"),
+        ("Stocks", "Stocks"),
+    ]
+
+    category = models.CharField(
+        max_length=20,
+        choices=CATEGORY_CHOICES,
+        help_text="Choose the asset category. Example: Forex, Crypto, Commodities, Stocks"
+    )
+    symbol = models.CharField(
+        max_length=20,
+        unique=True,
+        help_text="Enter the trading symbol. Example: EURUSD, BTCUSD, XAUUSD"
+    )
+    
+    flag = CloudinaryField(
+        "QRCode",
+        folder="asset_flags",
+        blank=True,
+        null=True,
+        help_text="Upload the asset flag/logo image. Example: eurousd_nobg.png"
+    )
+    change = models.FloatField(
+        help_text="Enter the percentage change in price. Example: 0.02 for +0.02%"
+    )
+    bid = models.DecimalField(
+        max_digits=20,
+        decimal_places=6,
+        help_text="Enter the bid price (buy). Example: 1.18031"
+    )
+    ask = models.DecimalField(
+        max_digits=20,
+        decimal_places=6,
+        help_text="Enter the ask price (sell). Example: 1.18051"
+    )
+    low = models.DecimalField(
+        max_digits=20,
+        decimal_places=6,
+        help_text="Enter the lowest price for the period. Example: 1.17626"
+    )
+    high = models.DecimalField(
+        max_digits=20,
+        decimal_places=6,
+        help_text="Enter the highest price for the period. Example: 1.18199"
+    )
+    time = models.TimeField(
+        help_text="Enter the timestamp of the price update. Example: 10:47:52"
+    )
+
+    def __str__(self):
+        return f"{self.symbol} ({self.category})"
 
 
 

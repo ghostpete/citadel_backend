@@ -1,6 +1,14 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Transaction, PaymentMethod, AdminWallet
+from .models import (
+    CustomUser, 
+    Transaction, 
+    PaymentMethod, 
+    AdminWallet, 
+    Trader, 
+    Asset,
+)
+
 from django.forms import TextInput, Textarea
 from django import forms
 
@@ -32,3 +40,11 @@ admin.site.register(CustomUser, UserAdminConfig)
 admin.site.register(Transaction)
 admin.site.register(PaymentMethod)
 admin.site.register(AdminWallet)
+admin.site.register(Trader)
+admin.site.register(Asset)
+
+
+
+
+
+

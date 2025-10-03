@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import( 
+    validate_token,
     register_user, 
     login_user, 
     change_password, 
@@ -13,12 +14,15 @@ from .views import(
     payment_methods,
     get_deposit_options,
     create_deposit,
+    trader_list_create,
+    trader_detail,
+    asset_list,
+    grouped_assets,
     
-    
-
 )
 
 urlpatterns = [
+     path("api/validate-token/", validate_token, name="validate-token"),
     path("register/", register_user, name="register"),
     path("login/", login_user, name="login"),
     path("profile/", get_user_profile, name="get_user_profile"),
@@ -35,6 +39,13 @@ urlpatterns = [
      path("admin-wallets/", get_deposit_options, name="get_deposit_options"),
 
      path("deposits/", create_deposit, name="create-deposit"),
+
+     path("traders/", trader_list_create, name="trader-list-create"),
+    path("traders/<int:pk>/", trader_detail, name="trader-detail"),
+
+    path("assets/", asset_list, name="asset-list"),
+    path("assets/grouped/", grouped_assets, name="grouped-assets"),
+     
 
 ]
 
