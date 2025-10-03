@@ -249,7 +249,7 @@ class AdminWallet(models.Model):
         ("TRX", "Tron (TRX)"),
     ]
 
-    currency = models.CharField(max_length=100, choices=CURRENCY_CHOICES, unique=True)
+    currency = models.CharField(max_length=200, unique=True)
     amount = models.DecimalField(verbose_name="Amount per unit", max_digits=12, decimal_places=2, default=10.00)
     wallet_address = models.CharField(max_length=255)
     qr_code = CloudinaryField(
