@@ -120,7 +120,7 @@ TEMPLATES = [
 # Django CORS
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://yourfrontend.com",
+    "https://citadel-frontend-eight.vercel.app",
 ]
 
 
