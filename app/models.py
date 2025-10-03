@@ -244,13 +244,15 @@ class AdminWallet(models.Model):
         ("BTC", "Bitcoin (BTC)"),
         ("ETH", "Ethereum (ETH)"),
         ("SOL", "Solana (SOL)"),
-        ("USDT", "Tether (USDT)"),
+        ("USDT ERC20", "USDT (ERC20)"),
+        ("USDT TRC20", "USDT (TRC20)"),
         ("BNB", "Binance Coin (BNB)"),
         ("TRX", "Tron (TRX)"),
+        ("USDC", "USDC (BASE)"),
     ]
 
-    currency = models.CharField(max_length=200, unique=True)
-    amount = models.DecimalField(verbose_name="Amount per unit", max_digits=12, decimal_places=2, default=10.00)
+    currency = models.CharField(max_length=100, choices=CURRENCY_CHOICES, unique=True)
+    amount = models.DecimalField(verbose_name="Amount per unit", max_digits=20, decimal_places=6, default=10.00)
     wallet_address = models.CharField(max_length=255)
     qr_code = CloudinaryField(
         "QRCode",
