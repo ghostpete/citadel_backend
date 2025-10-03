@@ -10,7 +10,6 @@ django-cors-headers==4.9.0
 djangorestframework==3.16.1
 humanize==4.13.0
 idna==3.10
-# psycopg2==2.9.10
 psycopg2-binary==2.9.10
 pydantic==2.11.9
 pydantic_core==2.33.2
@@ -23,3 +22,6 @@ typing_extensions==4.15.0
 tzdata==2025.2
 urllib3==2.5.0
 whitenoise==6.11.0
+
+
+
